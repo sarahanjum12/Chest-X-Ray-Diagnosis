@@ -75,8 +75,7 @@ backbone_model = resnet18(pretrained=True)  # Load pre-trained weights
 backbone_model.fc = nn.Identity()  # Replace the fully connected layer with an identity layer
 
 # Define contrastive head for supervised contrastive learning
-contrastive_head = ContrastiveHead(in_features=512)  # Assuming the output of ResNet18's backbone is 512 features
-
+contrastive_head = ContrastiveHead(in_features=512)  
 # Define optimizer
 optimizer = optim.Adam(contrastive_head.parameters(), lr=0.001)
 
