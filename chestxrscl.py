@@ -1,5 +1,4 @@
 import torch
-import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
@@ -11,6 +10,11 @@ from PIL import Image
 def contrastive_head(features, in_features):
     fc = nn.Linear(in_features, 1)
     return fc(features)
+
+def contrastive_loss(outputs, target, margin=1.0):
+    # Calculate contrastive loss
+    loss = nn.MarginRankingLoss(margin=margin)(outputs, target, torch.ones_like(target))
+    return loss
 
 def load_custom_dataset(root_dir, transform=None):
     images = []
@@ -40,14 +44,9 @@ transform = transforms.Compose([
 
 images, targets = load_custom_dataset('C:\\Users\\hp\\Downloads\\chestxr\\COVID-19_Radiography_Dataset', transform=transform)
 
-
 dataset = list(zip(images, targets))
 train_size = int(0.8 * len(dataset))
 train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, len(dataset) - train_size])
-
-print("Number of samples in train dataset:", len(train_dataset))
-print("Number of samples in test dataset:", len(test_dataset))
-
 
 train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
@@ -66,7 +65,7 @@ for epoch in range(num_epochs):
         features = backbone_model(inputs)
         outputs = contrastive_head(features, in_features=512)
         target = labels.unsqueeze(1).float()
-        loss = nn.BCEWithLogitsLoss()(outputs, target)
+        loss = contrastive_loss(outputs, target)
         loss.backward()
         optimizer.step()
         running_loss += loss.item()
@@ -75,46 +74,3 @@ for epoch in range(num_epochs):
             running_loss = 0.0
 
 print('Finished Training')
-
-
-
-images, targets = load_custom_dataset('C:\\Users\\hp\\Downloads\\chestxr\\COVID-19_Radiography_Dataset', transform=transform)
-print("Total number of samples in dataset:", len(dataset))
-
-dataset = list(zip(images, targets))
-train_size = int(0.8 * len(dataset))
-train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, len(dataset) - train_size])
-
-print("Number of samples in train dataset:", len(train_dataset))
-print("Number of samples in test dataset:", len(test_dataset))
-
-
-train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
-
-backbone_model = resnet18(pretrained=True)
-backbone_model.fc = nn.Identity()
-
-optimizer = optim.Adam(backbone_model.parameters(), lr=0.001)
-
-num_epochs = 1
-for epoch in range(num_epochs):
-    backbone_model.train()
-    running_loss = 0.0
-    for batch_idx, (inputs, labels) in enumerate(train_loader):
-        optimizer.zero_grad()
-        features = backbone_model(inputs)
-        outputs = contrastive_head(features, in_features=512)
-        target = labels.unsqueeze(1).float()
-        loss = nn.BCEWithLogitsLoss()(outputs, target)
-        loss.backward()
-        optimizer.step()
-        running_loss += loss.item()
-        if batch_idx % 10 == 9:
-            print('[%d, %5d] loss: %.3f' % (epoch + 1, batch_idx + 1, running_loss / 10))
-            running_loss = 0.0
-
-print('Finished Training')
-
-
-
